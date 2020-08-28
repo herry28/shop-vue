@@ -64,7 +64,7 @@ export default {
                 if(res.meta.status !== 200) return this.$message.error('登录失败')
                 this.$message.success('登录成功')
                 // 登录成功后需将token保存到sessionStorage
-                  console.log(res)
+                //   console.log(res)
                 window.sessionStorage.setItem('token',res.data.token)
                 // 通过编程式导航跳转到后台主页，路由地址/home
                 this.$router.push('/home')

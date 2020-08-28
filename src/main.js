@@ -8,6 +8,11 @@ import './assets/css/common.css'
 import axios from 'axios'
 // 配置请求的根路径
 axios.defaults.baseURL='https://www.liulongbin.top:8888/api/private/v1/'
+// 请求拦截器，为有权限的api挂载token令牌
+axios.interceptors.request.use(config=>{
+  config.headers.Authorization=window.sessionStorage.getItem('token')
+  return config//必须return config
+})
 // 将axios挂载到vue原型链上
 Vue.prototype.$http=axios
 
