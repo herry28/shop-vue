@@ -8,6 +8,7 @@ import Welcome from '../components/Welcome.vue'
 import User from '../views/users/User.vue'
 import Right from '../views/powers/Right.vue'
 import Role from '../views/powers/Role.vue'
+import Cate from '../views/goods/Cate.vue'
 
 Vue.use(VueRouter)
 
@@ -34,6 +35,10 @@ Vue.use(VueRouter)
         {
           path:'/roles',
           component:Role
+        },
+        {
+          path:'/categories',
+          component:Cate
         },
 
     ]}
