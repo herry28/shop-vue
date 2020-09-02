@@ -68,7 +68,7 @@
                 <template slot-scope="scope">
                     <el-button size="mini" type="primary" icon="el-icon-edit">编辑</el-button>
                     <el-button size="mini" type="danger" icon="el-icon-delete">删除</el-button>
-                    <el-button size="mini" type="warning" icon="el-icon-setting" @click="showSetRightDialog(scope.row)">分配角色</el-button>
+                    <el-button size="mini" type="warning" icon="el-icon-setting" @click="showSetRightDialog(scope.row)">分配权限</el-button>
                 </template>
             </el-table-column>
         </el-table>
@@ -80,6 +80,7 @@
     :visible.sync="setRightDialogVisible" width="50%">
          <!-- 对话框主体区域 -->
          <el-tree 
+         ref="treeRef"
          :data="rightsList" 
          :props="treeProps" 
          :default-checked-keys="leafKeys"
@@ -89,7 +90,7 @@
          <!-- 对话框底部区域 -->
             <span slot="footer" class="dialog-footer">
                 <el-button @click="setRightDialogVisible= false">取 消</el-button>
-                <el-button type="primary"  @click="setRightDialogVisible=false" >确 定</el-button>
+                <el-button type="primary"  @click="allotRights" >确 定</el-button>
             </span>
     </el-dialog>
   </div>
@@ -111,7 +112,9 @@ export default {
                 children:'children'
             },
             // 默认选中的节点id数组
-           leafKeys:[]
+           leafKeys:[],
+            //即将分配权限的角色id
+            roleId:''    
         }
     },
     created(){
@@ -151,6 +154,8 @@ export default {
         },
         // 展示分配权限的对话框
        async showSetRightDialog(role){
+        //    得到即将分配权限的角色id，并将其放在data中
+           this.roleId=role.id
             // 获取所有权限数据
          const {data:res} = await this.$http.get('rights/tree')
          if(res.meta.status!==200){
@@ -177,6 +182,23 @@ export default {
         // 监听 分配权限对话框关闭事件
         setRightDialogClosed(){
             this.leafKeys=[]
+        },
+        // 为角色 分配权限
+       async allotRights(){
+            // 全选及半选按钮的id
+            const keys=[...this.$refs.treeRef.getCheckedKeys(),...this.$refs.treeRef.getHalfCheckedKeys()]
+            // console.log(keys)
+            const idStr=keys.join(',')  //将其拼接为以，分隔的字符串
+            // console.log(idStr)
+            const {data:res}=await this.$http.post(`roles/${this.roleId}/rights`,{rids:idStr})
+            if(res.meta.status!==200){
+                this.$message.error('分配权限失败')
+            }
+            this.$message.success('分配权限成功')
+            // 重新获取
+            this.getRolesList()
+            // 隐藏分配权限的对话框
+            this. setRightDialogVisible=false
         }
 
     }
