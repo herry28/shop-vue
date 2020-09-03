@@ -55,6 +55,7 @@
     </el-card>
     <!-- 添加分类的对话框区域 -->
     <el-dialog title="添加分类" label-width='100px'
+        @close='addCateDialogClosed'
         :visible.sync="addCateDialogVisible">
         <!-- 添加分类的表单区域 -->
         <el-form :model='addCateForm' :rules="addCateFormRules" ref="addCateFormRef">
@@ -75,7 +76,7 @@
         <!-- 底部区域 -->
         <span slot="footer" class="dialog-footer">
             <el-button @click="addCateDialogVisible=false">取消</el-button>
-            <el-button @click="addCateDialogVisible=false" type="primary">确认</el-button>
+            <el-button @click="addCate" type="primary">确认</el-button>
         </span>
     </el-dialog>
   </div>
@@ -195,7 +196,42 @@ export default {
         },
         // 选择项发生变化时触发此函数
         parentCateChanged(){
-            console.log(this.selectedKeys)
+            // 如果selectedKeys数组的长度大于0，则证明选中了父级分类
+            if(this.selectedKeys.length>0){
+                // 父级分类的id
+                this.addCateForm.cat_pid=this.selectedKeys[this.selectedKeys.length-1]
+                // 为当前分类的等级赋值
+                this.addCateForm.cat_level=this.selectedKeys.length
+                return
+            }else{
+                this.addCateForm.cat_pid=0
+                this.addCateForm.cat_level=0
+            }
+        },
+        // 点击按钮，添加新的分类
+        addCate(){
+            // console.log(this.addCateForm)
+            // 1.预验证
+            this.$refs.addCateFormRef.validate(async valid=>{
+                if(!valid) return //验证没通过
+                // 验证通过，发起请求
+               const {data:res}=await this.$http.post('categories',this.addCateForm)
+               if(res.meta.status!==201){
+                   return this.$message.error('添加分类失败')
+               }
+               this.$message.success('添加分类成功')
+               this.getCateList()
+               this.addCateDialogVisible=false
+            })
+        },
+        // 监听分类对话框的关闭事件
+        addCateDialogClosed(){
+            //重置表单
+            this.$refs.addCateFormRef.resetFields()
+            this.selectedKeys=[],
+            this.addCateForm.cat_level=0
+            this.addCateForm.cat_pid=0
+
         }
     }
 }
