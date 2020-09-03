@@ -74,7 +74,7 @@ export default {
                 "145":"el-icon-s-data",
             },
             // 菜单是否折叠
-            isCollapse:'false',
+            isCollapse:false,
             // 被激活的菜单
             activePath:''
         }
