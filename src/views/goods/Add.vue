@@ -56,16 +56,46 @@
                         </el-checkbox-group>
                     </el-form-item>
                 </el-tab-pane>
-                <el-tab-pane label="商品属性" name="2">商品参数</el-tab-pane>
-                <el-tab-pane label="商品图片" name="3">商品图片</el-tab-pane>
-                <el-tab-pane label="商品内容" name="4">商品内容</el-tab-pane>
+                <el-tab-pane label="商品属性" name="2">
+                    <el-form-item :label="item.attr_name" 
+                        v-for="item in onlyTableData" :key="item.attr_id">
+                        <el-input v-model="item.attr_vals"></el-input>
+                    </el-form-item>
+                </el-tab-pane>
+                <el-tab-pane label="商品图片" name="3">
+                    <!-- 图片上传区域 -->
+                    <el-upload :action="uploadUrl"
+                        :headers="headerObj" 
+                        :on-success="handleSuccess"
+                        :on-preview="handlePreview" 
+                        :on-remove="handleRemove" 
+                        list-type="picture">
+                        <el-button size="mini" type="primary">点我上传</el-button>
+                    </el-upload>
+                </el-tab-pane>
+                <el-tab-pane label="商品内容" name="4">
+                    <!-- 富文本编辑器组件区域 -->
+                    <quill-editor v-model="addForm.goods_introduce">
+                    </quill-editor>
+                    <!-- 添加商品的按钮 -->
+                    <el-button type="primary" class="addBtn" @click="add">添加商品</el-button>
+                </el-tab-pane>
             </el-tabs>
         </el-form>   
     </el-card>
+
+
+    <!-- 图片预览的对话框 -->
+    <el-dialog title="图片预览" :visible.sync="previewVisible" width="50%">
+        <img :src="previewUrl" class="previewImg">
+    </el-dialog>
     </div>
 </template>
 
 <script>
+// 导入lodash（深拷贝）
+import _ from 'lodash'
+
 export default {
     data(){
         return {
@@ -78,7 +108,13 @@ export default {
                 goods_weight:0,
                 goods_number:0,
                 // 商品所属的分类数组
-                goods_cat:[]
+                goods_cat:[],
+                // 图片数组
+                pics:[],
+                // 商品简介
+                goods_introduce:'',
+                //属性数组
+                attrs:[]
             },
             // 添加商品的表单数据验证规则对象
             addFormRules:{
@@ -107,7 +143,20 @@ export default {
                 children:'children'
             },
             // 动态参数列表数据
-            manyTableData:[]
+            manyTableData:[],
+              // 静态属性面板数据
+            onlyTableData:[],
+
+            // 图片上传的地址
+            uploadUrl:'https://www.liulongbin.top:8888/api/private/v1/upload',
+            // 图片上传组件的请求头对象
+            headerObj:{
+                Authorization:window.sessionStorage.getItem('token')
+            },
+            // 图片预览的地址
+            previewUrl:'',
+            // 控制图片预览对话框的显示与隐藏
+            previewVisible:false
 
         }
     },
@@ -153,7 +202,76 @@ export default {
                 })
                 this.manyTableData=res.data
                 // console.log(this.manyTableData)
+            }else if(this.activeIndex==='2'){
+                 const {data:res}=await this.$http.get(`categories/${this.cateId}/attributes`,{params:{sel:'only'}})
+                if(res.meta.status!==200){
+                    return this.$message.error('获取静态属性数据失败')
+                }
+                this.onlyTableData=res.data
             }
+        },
+
+        // 处理图片预览
+        handlePreview(file){
+            this.previewUrl=file.response.data.url
+            this.previewVisible=true
+        },
+          // 处理移除图片的操作
+        handleRemove(file){
+            // console.log(file)
+            // 1.获取将要删除的图片的临时路径
+            const filePath=file.response.dta.tmp_path
+            // 2.从pics数组中，找到这个图片对应的索引值
+            const i=this.addForm.pics.findIndex(v=>v.pic===filePath)
+            // 3.调用数组的splice()
+            this.addForm.pics.splice(i,1)
+        },
+         // 处理图片上传成功的的操作
+        handleSuccess(response){
+            // 1.拼接得到一个图片信息对象
+            const picInfo={pic:response.data.tmp_path}
+            // 2.将图片信息对象push到pics数组中
+            this.addForm.pics.push(picInfo)
+            console.log(this.addForm)
+        },
+        // 添加商品
+        add(){
+            // 表单预校验
+            this.$refs.addFormRef.validate(async valid=>{
+                if(!valid){
+                    return this.$message.error('请填写必要的表单项')
+                }
+                // 执行添加的业务逻辑
+                // 1.加工请求参数lodash cloneDeep()
+                const form = _.cloneDeep(this.addForm)
+                form.goods_cat=form.goods_cat.join(',')
+                // 2.处理动态参数
+                this.manyTableData.forEach(item=>{
+                    const newInfo={
+                        attr_id:item.attr_id,
+                        attr_value:item.attr_vals.join(' ')
+                    }
+                    this.addForm.attrs.push(newInfo)
+                })
+                // 3.处理静态属性
+                 this.onlyTableData.forEach(item=>{
+                    const newInfo={
+                        attr_id:item.attr_id,
+                        attr_value:item.attr_vals
+                    }
+                    this.addForm.attrs.push(newInfo)
+                })
+                form.attrs=this.addForm.attrs
+                // console.log(form)
+                //4.发起请求，添加商品
+                const {data:res} = await this.$http.post('goods',form)
+                if(res.meta.status!==201){
+                    return this.$message.error('添加商品失败')
+                }
+                this.$message.success('添加商品成功')
+                // 跳转到商品列表页面
+                this.$router.push('/goods')
+            })
         }
     },
     computed:{
@@ -176,5 +294,14 @@ export default {
     }
     .el-checkbox{
         margin: 0 10px 0 0!important;
+    }
+    .previewImg{
+        width: 100%;
+    }
+    .ql-editor{
+        min-height: 300px!important;
+    }
+    .addBtn{
+        margin-top: 15px!important;
     }
 </style>
